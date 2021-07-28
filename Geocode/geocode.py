@@ -1,5 +1,6 @@
 import os
 import requests
+import logging
 from flask import (Blueprint, jsonify, request, abort)
 from utils import haversine
 
@@ -28,6 +29,12 @@ def calculate():
         "format": "json",
         "lang": "en_US"
     }
+    # set logging to save data .logfile
+    logging.basicConfig(filename="logfile/{}.log".format(search), format='%(asctime)s %(message)s', filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.info("Searching address/location : {}".format(search))
+    logger.info("===========================================")
 
     res = requests.get(url=url, params=params)
     res_json = res.json()
@@ -41,9 +48,15 @@ def calculate():
         lng_target = float(lng_lat[0])
         lat_target = float(lng_lat[1])
         distance = haversine(lat_center, lng_center, lat_target, lng_target)
-        n['GeoObject']['Distance'] = distance
+        n['GeoObject']['Distance'] = str(distance)
+        if distance >= float(os.getenv('R_MKD')):
+            logger.info("---------------------------------")
+            logger.info("kind : {}".format(n['GeoObject']['metaDataProperty']['GeocoderMetaData']['kind']))
+            logger.info("address : {}".format(n['GeoObject']['metaDataProperty']['GeocoderMetaData']['text']))
+            logger.info("Longtitude Latitude : {}".format(n['GeoObject']['Point']['pos']))
+            logger.info("Distance : {}".format(distance))
+            logger.info("----------------------------------")
 
-    # a = haversine(lat_center, lng_center, lat_target, lng_target)
     data = {
         "status": "success",
         "body": data_list
